@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "Open Runna",
+    "slug": "open-runna",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "openrunna",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0A0A"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.openrunna.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Open Runna needs your location to track your runs",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Open Runna needs your location to track background runs",
+        "NSMotionUsageDescription": "Open Runna uses motion sensors for cadence tracking"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0A0A"
+      },
+      "package": "com.openrunna.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "ACTIVITY_RECOGNITION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Open Runna uses your location to track runs."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
