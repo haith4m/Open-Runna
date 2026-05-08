@@ -1,0 +1,28 @@
+{
+  "name": "open-runna",
+  "version": "1.0.0",
+  "description": "AI-powered adaptive running coach platform",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*", "infrastructure/*"],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:mobile": "turbo run dev --filter=mobile",
+    "dev:api": "turbo run dev --filter=api",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "type-check": "turbo run type-check",
+    "db:migrate": "cd apps/api && prisma migrate dev",
+    "db:seed": "cd apps/api && prisma db seed"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "prettier": "^3.1.0",
+    "turbo": "^1.10.16",
+    "typescript": "^5.3.3"
+  },
+  "packageManager": "pnpm@8.14.0"
+}
