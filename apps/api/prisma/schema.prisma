@@ -19,13 +19,14 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  profile        AthleteProfile?
-  plans          TrainingPlan[]
-  runs           Run[]
-  raceHistory    RacePerformance[]
-  goalRaces      GoalRace[]
-  coachMessages  CoachMessage[]
-  refreshTokens  RefreshToken[]
+  profile              AthleteProfile?
+  plans                TrainingPlan[]
+  runs                 Run[]
+  raceHistory          RacePerformance[]
+  goalRaces            GoalRace[]
+  coachMessages        CoachMessage[]
+  refreshTokens        RefreshToken[]
+  wearableConnections  WearableConnection[]
 
   @@index([email])
 }
@@ -190,6 +191,7 @@ model TrainingPlan {
   thresholdPaceSecPerKm  Float
   intervalPaceSecPerKm   Float
   repetitionPaceSecPerKm Float
+  recoveryPaceSecPerKm   Float?
 
   status          String   @default("active")
   adaptationCount Int      @default(0)
@@ -263,13 +265,14 @@ model PlanAdaptation {
   planId String
   plan   TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
-  occurredAt       DateTime @default(now())
+  appliedAt        DateTime @default(now())
   trigger          String
   description      String   @db.Text
-  weeksAffected    Int[]
-  distanceChangeKm Float
+  weeksAffected    Int[]    @default([])
+  distanceChangeKm Float    @default(0)
 
   @@index([planId])
+  @@index([planId, appliedAt])
 }
 
 // ─── Runs ─────────────────────────────────────────────────────────────────────
@@ -367,4 +370,26 @@ model CoachMessage {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// ─── Wearable / Platform Connections ─────────────────────────────────────────
+
+model WearableConnection {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  source           String   // "strava" | "garmin" | "apple_health" | "coros" | "polar"
+  externalUserId   String?
+  accessToken      String?
+  refreshToken     String?
+  tokenExpiresAt   DateTime?
+  connected        Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, source], name: "userId_source")
+  @@index([source, externalUserId])
+  @@index([userId])
 }

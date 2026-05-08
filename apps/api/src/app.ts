@@ -15,6 +15,7 @@ import { workoutRoutes } from "./routes/workouts.js";
 import { runRoutes } from "./routes/runs.js";
 import { coachRoutes } from "./routes/coach.js";
 import { analyticsRoutes } from "./routes/analytics.js";
+import { integrationRoutes } from "./routes/integrations.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -63,7 +64,8 @@ export async function buildApp() {
   await app.register(workoutRoutes,   { prefix: "/api/v1/workouts"  });
   await app.register(runRoutes,       { prefix: "/api/v1/runs"      });
   await app.register(coachRoutes,     { prefix: "/api/v1/coach"     });
-  await app.register(analyticsRoutes, { prefix: "/api/v1/analytics" });
+  await app.register(analyticsRoutes,   { prefix: "/api/v1/analytics"    });
+  await app.register(integrationRoutes, { prefix: "/api/v1/integrations" });
 
   // ─── Health Check ─────────────────────────────────────────────────────────
   app.get("/health", async () => ({ status: "ok", timestamp: new Date().toISOString() }));
