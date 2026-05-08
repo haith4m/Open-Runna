@@ -1,0 +1,370 @@
+// Prisma Schema — Open Runna
+// PostgreSQL + TimescaleDB for time-series run metrics
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users & Auth ─────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile        AthleteProfile?
+  plans          TrainingPlan[]
+  runs           Run[]
+  raceHistory    RacePerformance[]
+  goalRaces      GoalRace[]
+  coachMessages  CoachMessage[]
+  refreshTokens  RefreshToken[]
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+}
+
+// ─── Athlete Profile ──────────────────────────────────────────────────────────
+
+model AthleteProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Demographics
+  dateOfBirth DateTime?
+  gender      String?
+  weightKg    Float?
+  heightCm    Float?
+
+  // Running background
+  experienceLevel     String  @default("beginner")
+  weeklyMileageKm     Float   @default(0)
+  longestRecentRunKm  Float   @default(0)
+  yearsRunning        Float   @default(0)
+
+  // Fitness
+  vdot                    Float?
+  estimatedVdot           Float?
+  vdotConfidence          Float   @default(0.5)
+  lactateThresholdPaceSpk Float?  // seconds per km
+  maxHeartRate            Int?
+  restingHeartRate        Int?
+
+  // Risk
+  injuryRiskScore Float @default(0)
+
+  // Lifestyle
+  availableTrainingDays String[] // ["monday","wednesday",...]
+  preferredLongRunDay   String   @default("sunday")
+  maxRunDurationMinutes Int      @default(120)
+  hasGymAccess          Boolean  @default(false)
+  hasTreadmillAccess    Boolean  @default(false)
+  doesStrengthTraining  Boolean  @default(false)
+  strengthDaysPerWeek   Int      @default(0)
+  sleepQuality          String   @default("good")
+  stressLevel           String   @default("moderate")
+
+  // Device
+  primaryDevice      String?
+  heartRateMonitor   String  @default("none")
+  hasGps             Boolean @default(true)
+
+  // Preferences
+  preferMetric Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  injuries InjuryRecord[]
+}
+
+model InjuryRecord {
+  id        String  @id @default(cuid())
+  profileId String
+  profile   AthleteProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  location    String
+  description String?
+  occurredAt  DateTime
+  resolvedAt  DateTime?
+  severity    Int      // 1-3
+  causedBy    String?
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+}
+
+// ─── Race History ─────────────────────────────────────────────────────────────
+
+model RacePerformance {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  distance              String
+  customDistanceMeters  Float?
+  finishTimeSeconds     Int
+  racedAt               DateTime
+  courseType            String   @default("road")
+  elevationGainMeters   Float?
+  temperatureCelsius    Float?
+  isGoalRace            Boolean  @default(false)
+  name                  String?
+  vdotCalculated        Float?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, racedAt])
+}
+
+model GoalRace {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  distance              String
+  customDistanceMeters  Float?
+  name                  String
+  date                  DateTime
+  goalTimeSeconds       Int?
+  goalType              String   @default("finish")
+  courseType            String   @default("road")
+  elevationGainMeters   Float?
+  location              String?
+  isA                   Boolean  @default(true)
+
+  plan TrainingPlan?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+// ─── Training Plans ───────────────────────────────────────────────────────────
+
+model TrainingPlan {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  goalRaceId String? @unique
+  goalRace   GoalRace? @relation(fields: [goalRaceId], references: [id])
+
+  name             String
+  targetDistance   String
+  targetTimeSeconds Int?
+  goalType         String  @default("finish")
+
+  startDate   DateTime
+  raceDate    DateTime
+  totalWeeks  Int
+  experienceLevel String
+
+  peakWeeklyKm    Float
+  currentWeeklyKm Float
+  longRunPeakKm   Float
+
+  // Pace anchors (sec/km)
+  vdot                   Float
+  easyPaceSecPerKm       Float
+  marathonPaceSecPerKm   Float?
+  thresholdPaceSecPerKm  Float
+  intervalPaceSecPerKm   Float
+  repetitionPaceSecPerKm Float
+
+  status          String   @default("active")
+  adaptationCount Int      @default(0)
+  generatedAt     DateTime @default(now())
+  lastModifiedAt  DateTime @updatedAt
+
+  weeks        TrainingWeek[]
+  adaptations  PlanAdaptation[]
+
+  @@index([userId, status])
+}
+
+model TrainingWeek {
+  id     String @id @default(cuid())
+  planId String
+  plan   TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  weekNumber           Int
+  startDate            DateTime
+  phase                String
+  phaseDescription     String
+  plannedDistanceKm    Float
+  plannedIntensityScore Float
+  isRecoveryWeek       Boolean @default(false)
+  isTaperWeek          Boolean @default(false)
+  actualDistanceKm     Float?
+  completionRate       Float?
+
+  workouts Workout[]
+
+  @@unique([planId, weekNumber])
+  @@index([planId])
+}
+
+model Workout {
+  id     String @id @default(cuid())
+  weekId String
+  week   TrainingWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  weekNumber      Int
+  dayOfWeek       Int      // 0=Mon
+  scheduledDate   DateTime
+  type            String
+  phase           String
+  title           String
+  description     String   @db.Text
+  coachRationale  String   @db.Text
+
+  steps Json  // WorkoutStep[] serialised
+
+  totalDistanceMeters    Float
+  estimatedDurationMinutes Int
+  primaryZone            String
+  intensityScore         Float
+  isKeySession           Boolean @default(false)
+  isOptional             Boolean @default(false)
+
+  status        String   @default("scheduled")
+  completedAt   DateTime?
+  skippedAt     DateTime?
+  skippedReason String?
+
+  run Run?
+
+  @@index([weekId])
+  @@index([scheduledDate])
+}
+
+model PlanAdaptation {
+  id     String @id @default(cuid())
+  planId String
+  plan   TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  occurredAt       DateTime @default(now())
+  trigger          String
+  description      String   @db.Text
+  weeksAffected    Int[]
+  distanceChangeKm Float
+
+  @@index([planId])
+}
+
+// ─── Runs ─────────────────────────────────────────────────────────────────────
+
+model Run {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  workoutId String? @unique
+  workout   Workout? @relation(fields: [workoutId], references: [id])
+
+  startedAt   DateTime
+  completedAt DateTime?
+  status      String   @default("in_progress")
+
+  // Route (simplified for display)
+  routeGeoJson     Json?
+  startLatitude    Float?
+  startLongitude   Float?
+  city             String?
+  country          String?
+
+  // Aggregate metrics
+  totalDistanceMeters    Float    @default(0)
+  durationSeconds        Int      @default(0)
+  elapsedSeconds         Int      @default(0)
+  averagePaceSecPerKm    Float?
+  bestPaceSecPerKm       Float?
+  averageHeartRate       Int?
+  maxHeartRate           Int?
+  averageCadenceSpm      Int?
+  elevationGainMeters    Float?
+  elevationLossMeters    Float?
+  calories               Int?
+  trainingLoad           Float    @default(0)
+
+  // Experience
+  perceivedEffort Int?
+  feelingRating   String?
+  postRunNotes    String? @db.Text
+
+  // Weather
+  temperatureCelsius Float?
+  humidity           Float?
+  conditions         String?
+
+  // Device/Integration
+  deviceType     String?
+  externalId     String?
+  externalSource String?
+
+  // Compliance
+  plannedDistanceMeters Float?
+  complianceScore       Float?
+
+  // Splits stored as JSONB for fast retrieval
+  splits Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, startedAt])
+  @@index([externalId, externalSource])
+}
+
+// GPS data stored in TimescaleDB hypertable (raw points)
+// This is created via raw SQL migration, not Prisma schema
+// The Prisma model here just enables type-safe queries
+model GpsPoint {
+  id        BigInt   @id @default(autoincrement())
+  runId     String
+  timestamp DateTime
+  latitude  Float
+  longitude Float
+  altitude  Float?
+  accuracy  Float?
+  speed     Float?
+  heading   Float?
+
+  @@index([runId, timestamp])
+}
+
+// ─── AI Coach Messages ────────────────────────────────────────────────────────
+
+model CoachMessage {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role      String   // "user" | "assistant"
+  content   String   @db.Text
+  contextType String? // "workout_explanation" | "week_summary" | "chat" | etc.
+  metadata  Json?    // attached workout id, week number, etc.
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

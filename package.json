@@ -1,0 +1,27 @@
+{
+  "name": "open-runna",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Adaptive AI-powered run training system",
+  "packageManager": "pnpm@9.0.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:generate": "cd apps/api && pnpm prisma generate",
+    "db:migrate": "cd apps/api && pnpm prisma migrate dev",
+    "db:studio": "cd apps/api && pnpm prisma studio"
+  },
+  "devDependencies": {
+    "@turbo/gen": "^2.0.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.5"
+  }
+}
